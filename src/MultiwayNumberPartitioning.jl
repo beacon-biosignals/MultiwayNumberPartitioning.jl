@@ -5,25 +5,39 @@ using JuMP, LinearAlgebra
 export partition, partition_min_largest!, partition_max_smallest!, partition_min_range!
 
 """
-    partition([objective! = partition_min_range!], S::AbstractVector, k::Int; optimizer) -> Vector{Int}
+    partition([objective! = partition_min_range!], S::AbstractVector, k::Int; optimizer, strict::Bool=true) -> Vector{Int}
 
 Find a partition of `S` into `k` subsets such the sums of the subsets are "as near as possible".
 
-Inputs:
+Arguments:
 * (optional): an objective, such as [`partition_min_largest!`](@ref), [`partition_max_smallest!`](@ref), or [`partition_min_range!`](@ref). Defaults to `partition_min_range!`.
 * `S` a collection of values to partition,
 * `k` a number of subsets to partition into
-* `optimizer`: a JuMP-compatible mixed-integer optimizer, such as GLPK, HiGHS, Cbc, Gurobi, etc.
+
+Keyword arguments:
+* `optimizer` (required): a JuMP-compatible mixed-integer optimizer, such as GLPK, HiGHS, Cbc, Gurobi, etc.
+* `strict` (optional): if `true`, an error will be thrown if the model was not solved optimally. If `false`, only a warning will be issued instead. Defaults to `true`.
 
 Returns a vector of indices `v` such that `v[i] == j` if `S[i]` is assigned to subset `j`. 
 """
-partition(S, k; optimizer) = partition(partition_min_range!, S, k; optimizer)
+partition(S, k; optimizer, strict::Bool=true) = partition(partition_min_range!, S, k; optimizer, strict)
 
-function partition(objective!, S::AbstractVector, k::Int; optimizer)
+function partition(objective!, S::AbstractVector, k::Int; optimizer, strict::Bool=true)
     model = Model(optimizer)
     element = populate_model!(model, S, k)
     objective!(model)
     JuMP.optimize!(model)
+
+    # Check that we've solved it optimally
+    if !(termination_status(model) == MOI.OPTIMAL && primal_status(model) == MOI.FEASIBLE_POINT)
+        msg = "Problem was not solved optimally or solution was not feasible. Termination status: $(termination_status(model)). Primal status: $(primal_status(model))."
+        if strict
+            error(mg)
+        else
+            @warn msg
+        end
+    end
+    
     # Now we've got a sort of one-hot encoded partitioning:
     onehot_partition = value.(element)
 
