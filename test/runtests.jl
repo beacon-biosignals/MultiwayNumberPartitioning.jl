@@ -1,6 +1,9 @@
-using MultiwayNumberPartitioning
+using MultiwayNumberPartitioning, HiGHS
 using Test
 
+
 @testset "MultiwayNumberPartitioning.jl" begin
-    # Write your tests here.
+    @testset "Example" begin
+        include("../example/example.jl")
+    end
 end
