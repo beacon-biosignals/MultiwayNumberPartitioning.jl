@@ -1,6 +1,6 @@
 name = "MultiwayNumberPartitioning"
 uuid = "76062700-569f-48fc-9444-88b66f57fbe9"
-authors = ["Beacon Biosignals", "Inc."]
+authors = ["Beacon Biosignals, Inc."]
 version = "0.1.0"
 
 [deps]
