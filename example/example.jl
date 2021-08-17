@@ -9,24 +9,42 @@ n_partitions = 4
 # * all animals of the same species are in the same group
 
 # First, let's generate our data:
-function make_table(n_animals)
+function make_table(n_animals, label_set)
     rng = StableRNG(324)
     possible_species = ["Aardvark", "Albatross", "Alligator", "Alpaca", "Anole", "Ant", "Anteater"]
-    return DataFrame(:species => [ rand(rng, possible_species) for i = 1:n_animals], :id => [uuid4(rng) for i = 1:n_animals])
+    return DataFrame(:species => [ rand(rng, possible_species) for i = 1:n_animals],
+                     :id => [uuid4(rng) for i = 1:n_animals],
+                     :label => [rand(rng, label_set) for i = 1:n_animals])
 end
 
 n_animals = 100
-df = make_table(n_animals)
+label_set = 1:5
+df = make_table(n_animals, label_set)
+
+function count_labels(v, label_set)
+    d = Dict{eltype(label_set), Int}()
+    sizehint!(d, length(label_set))
+    for l in label_set
+        d[l] = 0
+    end
+    for elt in v
+        d[elt] += 1
+    end
+    return [ d[l] for l in label_set]
+end
 
 # Now, we will group them by species and count how many individuals we have:
-count_by_species = combine(groupby(df, :species), nrow => :n_individuals)
+count_by_species = combine(groupby(df, :species),
+                           nrow => :n_individuals,
+                           :label => (v -> Ref(count_labels(v, label_set))) => :labels)
 
+group_labels = reduce(vcat, permutedims.(count_by_species.labels))
 # Now, we will partition them.
 # First, we choose our optimizer. We will use the new MIT licensed HiGHS solver (https://github.com/ERGO-Code/HiGHS)
 optimizer = optimizer_with_attributes(HiGHS.Optimizer, MOI.Silent() => true) # quiet, please!
 
 # Now, perform the partitioning:
-transform!(count_by_species, :n_individuals => (v -> partition(v, n_partitions; optimizer)) => :partition)
+transform!(count_by_species, :n_individuals => (v -> partition(partition_min_range!, v, n_partitions; optimizer, group_labels)) => :partition)
 
 # Already here we can look at `count_by_species` to see the results. However, we can also
 # `leftjoin!` these partitions back onto our original DataFrame so that we can see which individual is in which partition:
