@@ -8,8 +8,12 @@ JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [compat]
-julia = "1"
+Chain = "0.4"
+DataFrames = "1"
+HiGHS = "0.2"
 JuMP = "0.21"
+StableRNGs = "1"
+julia = "1.5"
 
 [extras]
 Chain = "8be319e6-bccf-4806-a6f7-6fae938471bc"
@@ -20,4 +24,4 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [targets]
-test = ["Test", "HiGHS", "DataFrames", "Chain", "UUIDs", "StableRNGs"]
+test = ["Test", "Chain", "DataFrames", "HiGHS", "StableRNGs", "UUIDs"]
