@@ -44,7 +44,7 @@ See the [example](./example/example.jl) for a more detailed usage example.
 
 ## Choice of objective function
 
-In the case where the problem can not be perfectly solved (unlike the previous example), we choose an objective to optimize.
+We can choose various objective functions for the algorithm to use during the optimization procedure when finding a partitioning configuration.
 
 MultiwayNumberPartitioning.jl provides three objective functions:
 
