@@ -20,7 +20,9 @@ Keyword arguments:
 
 Returns a vector of indices `v` such that `v[i] == j` if `S[i]` is assigned to subset `j`. 
 """
-partition(S, k; optimizer, strict::Bool=true) = partition(partition_min_range!, S, k; optimizer, strict)
+function partition(S, k; optimizer, strict::Bool=true)
+    return partition(partition_min_range!, S, k; optimizer, strict)
+end
 
 function partition(objective!, S::AbstractVector, k::Int; optimizer, strict::Bool=true)
     model = Model(optimizer)
@@ -29,7 +31,8 @@ function partition(objective!, S::AbstractVector, k::Int; optimizer, strict::Boo
     JuMP.optimize!(model)
 
     # Check that we've solved it optimally
-    if !(termination_status(model) == MOI.OPTIMAL && primal_status(model) == MOI.FEASIBLE_POINT)
+    if !(termination_status(model) == MOI.OPTIMAL &&
+         primal_status(model) == MOI.FEASIBLE_POINT)
         msg = "Problem was not solved optimally or solution was not feasible. Termination status: $(termination_status(model)). Primal status: $(primal_status(model))."
         if strict
             error(mg)
@@ -37,13 +40,14 @@ function partition(objective!, S::AbstractVector, k::Int; optimizer, strict::Boo
             @warn msg
         end
     end
-    
+
     # Now we've got a sort of one-hot encoded partitioning:
     onehot_partition = value.(element)
 
     # We wish to convert it to a vector of indexes so that the `i`th element of the
     # vector corresponds to the subset `j` that element `i` belongs to:
-    partition = dropdims(mapslices(row -> only(findall(>(0.5), row)), onehot_partition; dims=2); dims=2)
+    partition = dropdims(mapslices(row -> only(findall(>(0.5), row)), onehot_partition;
+                                   dims=2); dims=2)
 
     return partition
 end
@@ -51,10 +55,10 @@ end
 # Populates an empty `model` with variables and objectives
 function populate_model!(model, S, k)
     # does element i belong to set j
-    @variable(model, element[i=1:length(S), j=1:k], binary=true)
+    @variable(model, element[i=1:length(S), j=1:k], binary = true)
 
     # Element `i` belongs to exactly one set j
-    @constraint(model, [i=1:length(S)], sum(element[i, :]) == 1)
+    @constraint(model, [i = 1:length(S)], sum(element[i, :]) == 1)
 
     # The sum of the `j`th subset can be expressed as a dot product between the `j`th column of `element` and `S`.
     # Why? Because the `j`th column of `element` is a boolean vector expressing which elements are in set `j`.
@@ -65,7 +69,7 @@ function populate_model!(model, S, k)
 
     # We can remove some non-uniqueness by ordering our subset sums.
     # This is also convenient for getting the smallest and largest elements.
-    @constraint(model, [j=1:(k-1)], subset_sum[j] <= subset_sum[j+1])
+    @constraint(model, [j = 1:(k - 1)], subset_sum[j] <= subset_sum[j + 1])
 
     return element
 end
@@ -101,7 +105,8 @@ Adds an objective function to the model to achieve the following:
 * Minimize the difference between the largest and smallest such sum over all subsets
 
 """
-partition_min_range!(model) = @objective(model, Min, last(model[:subset_sum]) - first(model[:subset_sum]))
-
+function partition_min_range!(model)
+    @objective(model, Min, last(model[:subset_sum]) - first(model[:subset_sum]))
+end
 
 end # module
