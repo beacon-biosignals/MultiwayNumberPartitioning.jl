@@ -1,3 +1,6 @@
+[![CI](https://github.com/beacon-biosignals/MultiwayNumberPartitioning.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/beacon-biosignals/MultiwayNumberPartitioning.jl/actions/workflows/CI.yml)
+[![codecov](https://codecov.io/gh/beacon-biosignals/MultiwayNumberPartitioning.jl/branch/main/graph/badge.svg?token=VA5FX824N9)](https://codecov.io/gh/beacon-biosignals/MultiwayNumberPartitioning.jl)
+
 # MultiwayNumberPartitioning
 
 A simple Julia package to optimally solve the [multiway number partitioning](https://en.wikipedia.org/wiki/Multiway_number_partitioning) problem
