@@ -11,10 +11,11 @@ n_partitions = 4
 # First, let's generate our data:
 function make_table(n_animals, label_set)
     rng = StableRNG(324)
-    possible_species = ["Aardvark", "Albatross", "Alligator", "Alpaca", "Anole", "Ant", "Anteater"]
-    return DataFrame(:species => [ rand(rng, possible_species) for i = 1:n_animals],
-                     :id => [uuid4(rng) for i = 1:n_animals],
-                     :label => [rand(rng, label_set) for i = 1:n_animals])
+    possible_species = ["Aardvark", "Albatross", "Alligator", "Alpaca", "Anole", "Ant",
+                        "Anteater"]
+    return DataFrame(:species => [rand(rng, possible_species) for i in 1:n_animals],
+                     :id => [uuid4(rng) for i in 1:n_animals],
+                     :label => [rand(rng, label_set) for i in 1:n_animals])
 end
 
 n_animals = 100
@@ -22,7 +23,7 @@ label_set = 1:5
 df = make_table(n_animals, label_set)
 
 function count_labels(v, label_set)
-    d = Dict{eltype(label_set), Int}()
+    d = Dict{eltype(label_set),Int}()
     sizehint!(d, length(label_set))
     for l in label_set
         d[l] = 0
@@ -30,12 +31,11 @@ function count_labels(v, label_set)
     for elt in v
         d[elt] += 1
     end
-    return [ d[l] for l in label_set]
+    return [d[l] for l in label_set]
 end
 
 # Now, we will group them by species and count how many individuals we have:
-count_by_species = combine(groupby(df, :species),
-                           nrow => :n_individuals,
+count_by_species = combine(groupby(df, :species), nrow => :n_individuals,
                            :label => (v -> Ref(count_labels(v, label_set))) => :labels)
 
 group_labels = reduce(vcat, permutedims.(count_by_species.labels))
@@ -44,12 +44,12 @@ group_labels = reduce(vcat, permutedims.(count_by_species.labels))
 optimizer = optimizer_with_attributes(HiGHS.Optimizer, MOI.Silent() => true) # quiet, please!
 
 # Now, perform the partitioning:
-transform!(count_by_species, :n_individuals => (v -> partition(partition_min_range!, v, n_partitions; optimizer, group_labels)) => :partition)
+transform!(count_by_species,
+           :n_individuals => (v -> partition(partition_min_range!, v, n_partitions; optimizer, group_labels)) => :partition)
 
 # Already here we can look at `count_by_species` to see the results. However, we can also
 # `leftjoin!` these partitions back onto our original DataFrame so that we can see which individual is in which partition:
-partitioned_df = leftjoin(df, count_by_species, on = :species)
-
+partitioned_df = leftjoin(df, count_by_species; on=:species)
 
 #####
 ##### Comparing objective functions
@@ -60,18 +60,20 @@ count_by_species = combine(groupby(df, :species), nrow => :n_individuals)
 
 # Now, let us try all three algorithms supported by the package:
 for alg in (partition_min_largest!, partition_max_smallest!, partition_min_range!)
-    alg_name = repr(alg; context = :compact => true)
-    transform!(count_by_species, :n_individuals => (v -> partition(alg, v, n_partitions; optimizer)) => alg_name)
+    alg_name = repr(alg; context=:compact => true)
+    transform!(count_by_species,
+               :n_individuals => (v -> partition(alg, v, n_partitions; optimizer)) => alg_name)
 end
 # Let's also generate two random partitions to compare to:
-count_by_species.partition_random_1 = rand(StableRNG(431), 1:n_partitions, nrow(count_by_species))
-count_by_species.partition_random_2 = rand(StableRNG(891), 1:n_partitions, nrow(count_by_species))
-
+count_by_species.partition_random_1 = rand(StableRNG(431), 1:n_partitions,
+                                           nrow(count_by_species))
+count_by_species.partition_random_2 = rand(StableRNG(891), 1:n_partitions,
+                                           nrow(count_by_species))
 
 # We can summarize the results with a little DataFrames manipulation.
 # See <https://bkamins.github.io/julialang/2021/05/28/pivot.html> for more on `stack` and `unstack`.
 summary_df = @chain count_by_species begin
-    stack(r"partition", :n_individuals; variable_name = :algorithm, value_name = :group)
+    stack(r"partition", :n_individuals; variable_name=:algorithm, value_name=:group)
     groupby([:algorithm, :group])
     combine(:n_individuals => sum => :group_size)
     unstack(:group, :algorithm, :group_size)
@@ -90,7 +92,8 @@ end
 @testset "Partitions are optimal (rough check)" begin
     for col in names(summary_df, r"partition")
         # "max smallest" really holds, compared to the other algorithms and to the random partition:
-        @test minimum(summary_df[:, :partition_max_smallest!]) >= minimum(summary_df[:, col])
+        @test minimum(summary_df[:, :partition_max_smallest!]) >=
+              minimum(summary_df[:, col])
 
         # "min largest" really holds, compared to the other algorithms and to the random partition:
         @test maximum(summary_df[:, :partition_min_largest!]) <= maximum(summary_df[:, col])
