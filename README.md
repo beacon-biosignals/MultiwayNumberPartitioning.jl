@@ -7,7 +7,7 @@ A simple Julia package to optimally solve the [multiway number partitioning](htt
 using a JuMP model with mixed-integer programming.
 
 There is one main function `partition` which tries to accomplish the following task:
-given a collection of numbers `S` and a number `k`, try to partition `S` into `k` subsets of roughly equal size.
+given a collection of numbers `S` and a number `k`, try to partition `S` into `k` subsets of roughly equal sum.
 
 For example:
 ```julia
